@@ -145,11 +145,21 @@ Fill in from **Project Settings → API**:
 npm install && npm run dev
 ```
 
-### 4. Deploy
+### 4. Deploy (Netlify)
 
-Push to GitHub, import at [vercel.com/new](https://vercel.com/new), paste the
-same three variables into **Environment Variables**, deploy. The URL Vercel
-gives back is the one you share.
+1. **Add new site → Import an existing project**, pick this repo. Netlify
+   detects Next.js and installs its Next runtime; [`netlify.toml`](netlify.toml)
+   pins the build command, publish directory and Node version.
+2. Before the first deploy finishes, add the same three variables under **Site
+   configuration → Environment variables**. Both `NEXT_PUBLIC_*` values are
+   needed at **build** time, so if you add them afterwards you must trigger a
+   redeploy for them to take effect.
+3. Set `SUPABASE_SERVICE_ROLE_KEY` scoped to **Functions** (and Builds) only —
+   never to the browser. It is the key that can write scores.
+
+The URL Netlify gives back is the one you share. A custom domain, if you add
+one, changes nothing else — join links are built from whatever origin the page
+is served on.
 
 ---
 
@@ -177,6 +187,8 @@ and QR at wall size — but nothing depends on it.
 
 ### Notes for the host
 
+- **Nothing runs between requests.** Both rotations are lazy, so the free
+  Netlify tier is enough — there is no cron, worker or always-on process.
 - **The azkar rotation needs no babysitting.** Rounds are derived from the
   clock and settled by whoever next loads the page, so nothing has to stay
   running.

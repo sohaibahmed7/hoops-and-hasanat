@@ -1,0 +1,12 @@
+# Netlify picks up Next.js automatically and installs its Next runtime, but
+# stating it here keeps the build reproducible and pins the Node version.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
