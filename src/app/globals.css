@@ -48,6 +48,9 @@ html {
 
 body {
   min-height: 100dvh;
+  /* Host badges (Netlify's, for one) float in the bottom corner. Keep a gutter
+     so the last line of a page is never sitting underneath one. */
+  padding-bottom: 3.5rem;
   color: var(--color-net-100);
   font-family: var(--font-display);
   /* Watercolour ground: pooled pigment from three directions over a cobalt
