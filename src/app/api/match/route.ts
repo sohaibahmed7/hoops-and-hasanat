@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       .from("matches")
       .select("id", { count: "exact", head: true })
       .eq("game_id", gameId)
-      .eq("status", "live");
+      .in("status", ["live", "pending"]);
     if ((count ?? 0) > 0) {
       return NextResponse.json({ error: "Finish the game on court first." }, { status: 409 });
     }
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
       .update({ score_a: a, score_b: b })
       .eq("id", body.matchId)
       .eq("game_id", gameId)
-      .eq("status", "live");
+      .in("status", ["live", "pending"]);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }
@@ -119,6 +119,8 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (!match) return NextResponse.json({ error: "No such match." }, { status: 404 });
 
+    // The host can settle a game the players left waiting on a confirmation.
+    await db.from("matches").update({ status: "live" }).eq("id", body.matchId).eq("status", "pending");
     const { error } = await db.rpc("finalize_match", { p_match: body.matchId, p_a: a, p_b: b });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
@@ -131,7 +133,7 @@ export async function POST(req: Request) {
       .delete()
       .eq("id", body.matchId)
       .eq("game_id", gameId)
-      .eq("status", "live");
+      .in("status", ["live", "pending"]);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ ok: true });
   }

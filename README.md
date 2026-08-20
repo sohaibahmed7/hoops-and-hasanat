@@ -35,15 +35,34 @@ King of the court:
 - A level game (only reachable if the host ends one early) puts both off:
   nobody earned the floor.
 
-The host never has to remember whose turn it is. Between games the console
-shows **Up next: X vs Y** and a single *Tip off* button, with a warning when the
-team on the floor is one win away from being moved on. A *change the matchup*
-override is there for when reality intervenes — a team gone to pray, someone
-short of players — and reseats the floor cleanly.
-
 Every player's phone shows where they stand in the queue: *you're on court*,
-*you're next on*, or *2 teams ahead of you*. That matters more than usual here,
-because there's no shared screen to glance at.
+*you're next on*, or *2 teams ahead of you*. Coming on court opens the Court
+tab automatically and buzzes the handset, so nobody has to be shouted for.
+
+### Who keeps score
+
+**The players do — the host never has to touch anything.** The host is usually
+playing too, and a host who is on court can't tip off games or record results
+for everyone else.
+
+So the two teams on court run it between themselves:
+
+1. Either side taps **Start the game**.
+2. They play. *Nothing is tracked basket by basket* — there is no live
+   scoreboard to keep updated while you're trying to play.
+3. When it's over, either side enters the **final score** from their own point
+   of view ("us 7, them 4"), as two rows of buttons — every possible score fits
+   on screen for a game to 5 or 7.
+4. The **other team confirms** with one tap, or says *that's not right*, which
+   clears the score so it can be entered again.
+
+Only the side that did *not* report can confirm — that's the whole check
+against a team writing itself a win — and any player on that side will do, so
+one flat battery can't hold up the court.
+
+The host console keeps a full override: it can confirm a result the players
+left hanging, scrub a game, change the matchup, or record a score itself. None
+of that is needed on a normal night.
 
 ### The three numbers
 
@@ -175,9 +194,9 @@ is served on.
    stops 14 v 3).
 4. Press **Start the evening**. The first azkar goes up on every phone and the
    rotation begins.
-5. Tip off from the console — it already knows who's up. `+1 / +2 / +3` while
-   play runs; the pad locks when a team reaches the target and **Final** applies
-   the rating and rotates the court.
+5. **Then put your phone away and play.** The teams on court start their own
+   games and report their own scores; the rotation and the ratings follow from
+   that. Your console is there if something goes wrong, not to be watched.
 6. Teams waiting their turn are reciting the whole time, and can see on their
    own phones when they're next.
 
@@ -192,8 +211,10 @@ and QR at wall size — but nothing depends on it.
 - **The azkar rotation needs no babysitting.** Rounds are derived from the
   clock and settled by whoever next loads the page, so nothing has to stay
   running.
-- **The court rotation is automatic too.** Finalising a game decides who holds
+- **The court rotation is automatic too.** A confirmed result decides who holds
   the floor and who comes on; the feed spells it out for everyone.
+- **You can play.** Nothing in the normal run of the evening needs the console,
+  so being on court doesn't stall anything.
 - **Moving devices.** *Copy host key* on the console, paste it into the same
   page on the other device. The key never leaves your browser otherwise — it
   lives in a table the public API key cannot read.
@@ -211,7 +232,7 @@ and QR at wall size — but nothing depends on it.
 | `/` | Landing — enter a room code |
 | `/host` | Create a game |
 | `/j/<CODE>` | Join screen (this is the share link) |
-| `/g/<CODE>` | Player: azkar counter + standings |
+| `/g/<CODE>` | Player: court, azkar counter, standings |
 | `/g/<CODE>/host` | Host console |
 | `/g/<CODE>/board` | Optional big-screen board (not needed) |
 

@@ -6,6 +6,7 @@ import { HoopMark, Wordmark } from "@/components/Brand";
 import { Feed } from "@/components/Feed";
 import { Leaderboard } from "@/components/Leaderboard";
 import { Scoreboard } from "@/components/Scoreboard";
+import { CourtPanel } from "@/components/CourtPanel";
 import { dhikrById } from "@/lib/dhikr";
 import { standings, useGameState } from "@/lib/useGameState";
 import { useDhikrTap } from "@/lib/useDhikrTap";
@@ -20,7 +21,7 @@ export default function PlayerPage() {
 
   const [playerToken, setPlayerToken] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"dhikr" | "table">("dhikr");
+  const [tab, setTab] = useState<"court" | "dhikr" | "table">("dhikr");
   const [puffs, setPuffs] = useState<Puff[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const puffSeq = useRef(0);
@@ -64,8 +65,37 @@ export default function PlayerPage() {
     }
   }, [round, left, refresh]);
 
-  const liveMatch = state?.matches.find((m) => m.status === "live") ?? null;
+  const liveMatch =
+    state?.matches.find((m) => m.status === "live" || m.status === "pending") ?? null;
   const started = state?.game.status === "live";
+  const iAmOnCourt = !!myTeam?.on_court;
+
+  // Phones live in pockets during a game, and there is no big screen to glance
+  // at. Coming on court pulls the player straight to the court tab and buzzes
+  // the handset, so "are we up?" never has to be asked across the hall.
+  const wasOnCourt = useRef(false);
+  useEffect(() => {
+    if (iAmOnCourt && !wasOnCourt.current) {
+      setTab("court");
+      if (navigator.vibrate) navigator.vibrate([90, 60, 90]);
+    }
+    if (!iAmOnCourt && wasOnCourt.current) setTab("dhikr");
+    wasOnCourt.current = iAmOnCourt;
+  }, [iAmOnCourt]);
+
+  // A result waiting on this team needs answering, not discovering later.
+  const awaitingMe =
+    !!liveMatch && liveMatch.status === "pending" && !!myTeam && liveMatch.reported_by !== myTeam.id
+    && (liveMatch.team_a === myTeam.id || liveMatch.team_b === myTeam.id);
+  const seenPending = useRef<string | null>(null);
+  useEffect(() => {
+    if (awaitingMe && liveMatch && seenPending.current !== liveMatch.id) {
+      seenPending.current = liveMatch.id;
+      setTab("court");
+      if (navigator.vibrate) navigator.vibrate([50, 40, 50, 40, 50]);
+    }
+    if (!awaitingMe) seenPending.current = null;
+  }, [awaitingMe, liveMatch]);
 
   const onTap = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (!started) return;
@@ -86,6 +116,10 @@ export default function PlayerPage() {
   const ended = state.game.status === "ended";
   const pos = courtPosition(myTeam?.id ?? null, state);
   const { onCourt, queue } = courtState(state);
+  const showCourtTab = started && !!myTeam && myTeam.on_court;
+  const tabs: Array<"court" | "dhikr" | "table"> = showCourtTab
+    ? ["court", "dhikr", "table"]
+    : ["dhikr", "table"];
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col px-5 pb-8 pt-6">
@@ -113,7 +147,7 @@ export default function PlayerPage() {
         With no projector in the hall, this card is the only thing telling a
         player when their team is up. It stays visible above the tabs.
       */}
-      {started && myTeam && (
+      {started && myTeam && tab !== "court" && (
         <div className="mt-4">
           {pos.kind === "playing" || pos.kind === "on" ? (
             <div
@@ -157,24 +191,46 @@ export default function PlayerPage() {
         </div>
       )}
 
-      <div className="mt-5 grid grid-cols-2 gap-1 rounded-xl p-1" style={{ background: "rgba(9,20,54,0.5)" }}>
-        {(["dhikr", "table"] as const).map((t) => (
+      <div
+        className={`mt-5 grid gap-1 rounded-xl p-1 ${showCourtTab ? "grid-cols-3" : "grid-cols-2"}`}
+        style={{ background: "rgba(9,20,54,0.5)" }}
+      >
+        {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className="mono rounded-lg py-2 text-[0.68rem] uppercase tracking-[0.14em] transition-colors"
+            className="mono relative rounded-lg py-2 text-[0.68rem] uppercase tracking-[0.14em] transition-colors"
             style={
               tab === t
                 ? { background: "rgba(244,241,234,0.12)", color: "#FAF8F4" }
                 : { color: "rgba(244,241,234,0.45)" }
             }
           >
-            {t === "dhikr" ? "Azkar" : "Standings"}
+            {t === "court" ? "Court" : t === "dhikr" ? "Azkar" : "Standings"}
+            {t === "court" && awaitingMe && (
+              <span
+                className="live-dot absolute right-2 top-2 h-1.5 w-1.5 rounded-full"
+                style={{ background: "#E8B04B" }}
+              />
+            )}
           </button>
         ))}
       </div>
 
-      {tab === "dhikr" ? (
+      {tab === "court" && showCourtTab && myTeam && playerToken ? (
+        <section className="flex-1 pt-5">
+          <CourtPanel
+            state={state}
+            myTeam={myTeam}
+            playerToken={playerToken}
+            onDone={refresh}
+          />
+          <p className="mt-4 text-center text-xs leading-relaxed" style={{ color: "rgba(244,241,234,0.45)" }}>
+            Your dhikr still counts while you play — the counter is on the Azkar
+            tab whenever you want it.
+          </p>
+        </section>
+      ) : tab === "dhikr" ? (
         <section className="flex flex-1 flex-col items-center pt-6">
           {!started ? (
             <div className="panel mt-10 w-full px-5 py-8 text-center">

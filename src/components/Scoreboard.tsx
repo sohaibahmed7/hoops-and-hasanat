@@ -33,10 +33,21 @@ export function Scoreboard({
       <div className="mb-2 flex items-center justify-center gap-2">
         <span
           className="live-dot inline-block h-1.5 w-1.5 rounded-full"
-          style={{ background: match.status === "live" ? "#D2503A" : "rgba(244,241,234,0.4)" }}
+          style={{
+            background:
+              match.status === "live"
+                ? "#D2503A"
+                : match.status === "pending"
+                  ? "#E8B04B"
+                  : "rgba(244,241,234,0.4)",
+          }}
         />
         <span className="eyebrow">
-          {match.status === "live" ? `on court · first to ${match.target}` : "final"}
+          {match.status === "live"
+            ? `on court · first to ${match.target}`
+            : match.status === "pending"
+              ? "waiting to be confirmed"
+              : "final"}
         </span>
       </div>
       <div className="flex items-center gap-4">

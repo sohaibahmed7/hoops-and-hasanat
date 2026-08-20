@@ -91,7 +91,7 @@ export default function HostConsole() {
     [code, hostToken, refresh]
   );
 
-  const live = state?.matches.find((m) => m.status === "live") ?? null;
+  const live = state?.matches.find((m) => m.status === "live" || m.status === "pending") ?? null;
 
   // Keep the tip-off pickers pointed at two real, idle teams.
   useEffect(() => {
@@ -321,8 +321,23 @@ export default function HostConsole() {
             first to {state.game.point_target}
           </p>
         </div>
+        <p className="mb-3 text-xs leading-relaxed" style={{ color: "rgba(244,241,234,0.5)" }}>
+          The teams on court run this themselves — they start their own game and
+          report the score. Everything below is a fallback for when that goes
+          wrong, so you can play without watching this screen.
+        </p>
 
-        {live ? (
+        {live && live.status === "pending" ? (
+          <PendingResult
+            live={live}
+            state={state}
+            busy={busy}
+            onConfirm={(a, b) =>
+              post("/api/match", { action: "final", matchId: live.id, scoreA: a, scoreB: b })
+            }
+            onReopen={() => post("/api/match", { action: "cancel", matchId: live.id })}
+          />
+        ) : live ? (
           <LiveMatchControls
             live={live}
             state={state}
@@ -789,6 +804,81 @@ function Queue({ state }: { state: GameState }) {
           No teams waiting.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * A result the players reported but nobody has confirmed. Normally the losing
+ * side confirms on their own phone; this is here for when they've left, their
+ * battery died, or the two sides can't agree.
+ */
+function PendingResult({
+  live,
+  state,
+  busy,
+  onConfirm,
+  onReopen,
+}: {
+  live: Match;
+  state: GameState;
+  busy: boolean;
+  onConfirm: (a: number, b: number) => void;
+  onReopen: () => void;
+}) {
+  const ta = state.teams.find((t) => t.id === live.team_a);
+  const tb = state.teams.find((t) => t.id === live.team_b);
+  const reporter = state.teams.find((t) => t.id === live.reported_by);
+  const waitingOn = live.reported_by === live.team_a ? tb : ta;
+  if (!ta || !tb) return null;
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-center gap-2">
+        <span className="live-dot inline-block h-1.5 w-1.5 rounded-full" style={{ background: "#E8B04B" }} />
+        <span className="eyebrow" style={{ color: "#E8B04B" }}>
+          waiting on {waitingOn?.name}
+        </span>
+      </div>
+
+      <div className="panel-quiet px-4 py-4 text-center">
+        <p className="mono tnum text-4xl font-bold">
+          {live.score_a} – {live.score_b}
+        </p>
+        <p className="mt-2 text-sm" style={{ color: "rgba(244,241,234,0.7)" }}>
+          <span style={{ color: colorOf(ta.color) }}>{ta.name}</span>
+          {" · "}
+          <span style={{ color: colorOf(tb.color) }}>{tb.name}</span>
+        </p>
+        <p className="mono mt-2 text-[0.62rem]" style={{ color: "rgba(244,241,234,0.45)" }}>
+          REPORTED BY {(reporter?.name ?? "?").toUpperCase()}
+        </p>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <button
+          className="btn btn-rim flex-1"
+          disabled={busy}
+          onClick={() => onConfirm(live.score_a, live.score_b)}
+        >
+          Confirm it myself
+        </button>
+        <button
+          className="btn"
+          disabled={busy}
+          onClick={() => {
+            if (confirm("Scrub this game? Nothing will be recorded and the same two teams stay on.")) {
+              onReopen();
+            }
+          }}
+        >
+          Scrub
+        </button>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed" style={{ color: "rgba(244,241,234,0.5)" }}>
+        {waitingOn?.name} can confirm this on their own phone — that&apos;s the
+        normal way. Only step in if they can&apos;t.
+      </p>
     </div>
   );
 }

@@ -104,7 +104,10 @@ create table if not exists matches (
   score_a    int not null default 0,
   score_b    int not null default 0,
   target     int not null default 7,               -- the target this game was played to
-  status     text not null default 'live',         -- live | final
+  status     text not null default 'live',         -- live | pending | final
+  -- A finished game is reported once, by one side, then confirmed by the other.
+  reported_by uuid references teams(id) on delete set null,
+  pending_at  timestamptz,
   delta_a    real,
   delta_b    real,
   created_at timestamptz not null default now(),
@@ -156,6 +159,8 @@ alter table players add column if not exists tap_allowance real not null default
 alter table players add column if not exists tap_checked   timestamptz not null default now();
 
 alter table matches add column if not exists target int not null default 7;
+alter table matches add column if not exists reported_by uuid references teams(id) on delete set null;
+alter table matches add column if not exists pending_at  timestamptz;
 
 -- Columns from earlier versions of this file that no longer carry meaning.
 -- Dropped rather than left behind so the shape matches what the app expects.
@@ -702,4 +707,147 @@ begin
     update teams set queue_pos = i where id = v_id;
     i := i + 1;
   end loop;
+end $$;
+
+
+-- ---------------------------------------------------------------------------
+-- Player-run results
+--
+-- The host is usually playing too, so a normal evening never needs them: the
+-- teams on court start their own game and report the final score between
+-- themselves. Nobody tracks the game basket by basket — one side reports the
+-- result at the end, the other side confirms it.
+--
+-- Every rule lives here rather than in the API, so none of it can be skipped
+-- by posting straight to the endpoint.
+-- ---------------------------------------------------------------------------
+
+/** Resolve a player token to their identity. Returns nothing if unknown. */
+create or replace function player_of(p_token text)
+returns table (player_id uuid, team_id uuid, game_id uuid)
+language sql stable security definer as $$
+  select p.id, p.team_id, p.game_id
+    from players p join player_secrets s on s.player_id = p.id
+   where s.token = p_token;
+$$;
+
+/** Either on-court side can tip off, so the court never waits on the host. */
+create or replace function start_by_player(p_token text)
+returns uuid language plpgsql security definer as $$
+declare
+  v_player uuid; v_team uuid; v_game uuid;
+  v_live int; v_target int; v_a uuid; v_b uuid; v_match uuid; v_status text;
+begin
+  select pl.player_id, pl.team_id, pl.game_id into v_player, v_team, v_game from player_of(p_token) pl;
+  if v_player is null then raise exception 'unknown player'; end if;
+
+  select status into v_status from games where id = v_game;
+  if v_status <> 'live' then raise exception 'the evening has not started yet'; end if;
+
+  select count(*) into v_live from matches
+   where game_id = v_game and status in ('live','pending');
+  if v_live > 0 then raise exception 'a game is already on'; end if;
+
+  perform seed_court(v_game);
+  select id into v_a from teams where game_id = v_game and on_court order by ord limit 1;
+  select id into v_b from teams where game_id = v_game and on_court order by ord desc limit 1;
+  if v_a is null or v_b is null or v_a = v_b then raise exception 'two teams are needed on court'; end if;
+  if v_team not in (v_a, v_b) then raise exception 'your team is not on court'; end if;
+
+  select point_target into v_target from games where id = v_game;
+  insert into matches (game_id, team_a, team_b, target)
+  values (v_game, v_a, v_b, v_target) returning id into v_match;
+
+  insert into feed (game_id, kind, text)
+  values (v_game, 'court',
+          (select name from teams where id = v_a) || ' v ' ||
+          (select name from teams where id = v_b) || ' — game on, first to ' || v_target);
+  return v_match;
+end $$;
+
+/**
+ * report_result(token, match, us, them)
+ *
+ * One side reports the final score from their own point of view, so the person
+ * tapping it never has to work out which team is "A". The result then sits
+ * waiting for the other side to confirm.
+ */
+create or replace function report_result(p_token text, p_match uuid, p_us int, p_them int)
+returns void language plpgsql security definer as $$
+declare
+  v_player uuid; v_team uuid; v_game uuid;
+  v_ta uuid; v_tb uuid; v_target int; v_status text; v_a int; v_b int;
+begin
+  select pl.player_id, pl.team_id, pl.game_id into v_player, v_team, v_game from player_of(p_token) pl;
+  if v_player is null then raise exception 'unknown player'; end if;
+
+  select m.team_a, m.team_b, m.target, m.status into v_ta, v_tb, v_target, v_status
+    from matches m where m.id = p_match and m.game_id = v_game for update;
+  if v_ta is null then raise exception 'no such game'; end if;
+  if v_status = 'final' then raise exception 'this game is already settled'; end if;
+  if v_team not in (v_ta, v_tb) then raise exception 'your team is not on court'; end if;
+
+  p_us   := least(v_target, greatest(0, p_us));
+  p_them := least(v_target, greatest(0, p_them));
+  -- A game runs *to* the target, so somebody has to have reached it.
+  if p_us < v_target and p_them < v_target then
+    raise exception 'one side has to reach % for the game to be over', v_target;
+  end if;
+
+  if v_team = v_ta then v_a := p_us; v_b := p_them;
+  else                  v_a := p_them; v_b := p_us; end if;
+
+  update matches
+     set score_a = v_a, score_b = v_b, status = 'pending',
+         reported_by = v_team, pending_at = now()
+   where id = p_match;
+end $$;
+
+/**
+ * confirm_by_player(token, match)
+ *
+ * Only the side that did *not* report can confirm — that is the whole check
+ * against a team writing itself a win. Any player on that side will do, not
+ * just whoever holds a phone, so one flat battery can't hold up the court.
+ */
+create or replace function confirm_by_player(p_token text, p_match uuid)
+returns void language plpgsql security definer as $$
+declare
+  v_player uuid; v_team uuid; v_game uuid;
+  v_ta uuid; v_tb uuid; v_rep uuid; v_status text; v_a int; v_b int;
+begin
+  select pl.player_id, pl.team_id, pl.game_id into v_player, v_team, v_game from player_of(p_token) pl;
+  if v_player is null then raise exception 'unknown player'; end if;
+
+  select m.team_a, m.team_b, m.reported_by, m.status, m.score_a, m.score_b
+    into v_ta, v_tb, v_rep, v_status, v_a, v_b
+    from matches m where m.id = p_match and m.game_id = v_game for update;
+  if v_ta is null then raise exception 'no such game'; end if;
+  if v_status <> 'pending' then raise exception 'there is nothing to confirm'; end if;
+  if v_team not in (v_ta, v_tb) then raise exception 'your team is not on court'; end if;
+  if v_team = v_rep then raise exception 'the other team has to confirm this one'; end if;
+
+  update matches set status = 'live' where id = p_match;  -- finalize_match expects live
+  perform finalize_match(p_match, v_a, v_b);
+end $$;
+
+/** "That's not right" — clears the reported score so it can be entered again. */
+create or replace function dispute_by_player(p_token text, p_match uuid)
+returns void language plpgsql security definer as $$
+declare v_player uuid; v_team uuid; v_game uuid; v_ta uuid; v_tb uuid; v_status text;
+begin
+  select pl.player_id, pl.team_id, pl.game_id into v_player, v_team, v_game from player_of(p_token) pl;
+  if v_player is null then raise exception 'unknown player'; end if;
+  select m.team_a, m.team_b, m.status into v_ta, v_tb, v_status
+    from matches m where m.id = p_match and m.game_id = v_game for update;
+  if v_ta is null then raise exception 'no such game'; end if;
+  if v_status <> 'pending' then raise exception 'there is nothing to dispute'; end if;
+  if v_team not in (v_ta, v_tb) then raise exception 'your team is not on court'; end if;
+
+  update matches
+     set status = 'live', reported_by = null, pending_at = null, score_a = 0, score_b = 0
+   where id = p_match;
+  insert into feed (game_id, kind, text)
+  values (v_game, 'court',
+          (select name from teams where id = v_team) || ' asked for the score to be re-entered.');
 end $$;

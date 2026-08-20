@@ -34,7 +34,8 @@ export type Match = {
   score_a: number;
   score_b: number;
   target: number;
-  status: "live" | "final";
+  status: "live" | "pending" | "final";
+  reported_by: string | null;
   delta_a: number | null;
   delta_b: number | null;
   created_at: string;
@@ -147,19 +148,24 @@ export function courtState(state: GameState) {
 export function courtPosition(teamId: string | null, state: GameState) {
   if (!teamId) return { label: "", detail: "", kind: "none" as const };
   const { onCourt, queue } = courtState(state);
-  const live = state.matches.find((m) => m.status === "live");
+  const live = state.matches.find((m) => m.status === "live" || m.status === "pending");
 
   if (onCourt.some((t) => t.id === teamId)) {
     const me = onCourt.find((t) => t.id === teamId)!;
     return {
       kind: live ? ("playing" as const) : ("on" as const),
-      label: live ? "You're on court" : "You're up — waiting to tip off",
-      detail:
-        me.streak >= 1
-          ? "Win this one and your team comes off too."
-          : live
-            ? "Go play. The counter will wait for you."
-            : "Stay close to the court.",
+      label: live
+        ? live.status === "pending"
+          ? "Result waiting to be settled"
+          : "You're on court"
+        : "Your team is up",
+      detail: !live
+        ? "Get on the court and start the game from the Court tab."
+        : live.status === "pending"
+          ? "Check the score on the Court tab."
+          : me.streak >= 1
+            ? "Win this one and your team comes off too."
+            : "Report the score on the Court tab when you're done.",
     };
   }
 
@@ -168,7 +174,7 @@ export function courtPosition(teamId: string | null, state: GameState) {
     return {
       kind: "next" as const,
       label: "You're next on",
-      detail: "Be ready as soon as this game finishes.",
+      detail: "You're on as soon as this game is confirmed.",
     };
   }
   if (at > 0) {

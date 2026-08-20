@@ -3,59 +3,61 @@ export type Dhikr = {
   arabic: string;
   translit: string;
   meaning: string;
-  /** Traditional count for one round, used for the round marker on the counter. */
-  round: number;
 };
 
+/**
+ * The rotation, in order. Every phone in the hall shows the same entry at the
+ * same time; the sequence is snapshotted onto the game row at creation, so
+ * editing this list only affects games created afterwards.
+ */
 export const ADHKAR: Dhikr[] = [
   {
     id: "subhanallah",
     arabic: "سُبْحَانَ ٱللَّٰهِ",
     translit: "SubhanAllah",
     meaning: "Glory be to Allah",
-    round: 33,
   },
   {
     id: "alhamdulillah",
     arabic: "ٱلْحَمْدُ لِلَّٰهِ",
     translit: "Alhamdulillah",
     meaning: "All praise is due to Allah",
-    round: 33,
   },
   {
     id: "allahuakbar",
     arabic: "ٱللَّٰهُ أَكْبَرُ",
     translit: "Allahu Akbar",
     meaning: "Allah is the Greatest",
-    round: 34,
   },
   {
     id: "tahlil",
     arabic: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ",
     translit: "La ilaha illa Allah",
     meaning: "There is no god but Allah",
-    round: 100,
   },
   {
     id: "istighfar",
     arabic: "أَسْتَغْفِرُ ٱللَّٰهَ",
     translit: "Astaghfirullah",
     meaning: "I seek forgiveness from Allah",
-    round: 100,
   },
   {
     id: "salawat",
     arabic: "ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ",
     translit: "Allahumma salli ala Muhammad",
     meaning: "O Allah, send blessings upon Muhammad ﷺ",
-    round: 100,
+  },
+  {
+    id: "sallallahu",
+    arabic: "صَلَّى ٱللَّٰهُ عَلَيْهِ وَسَلَّمَ",
+    translit: "Sallallahu alayhi wa sallam",
+    meaning: "May Allah send blessings and peace upon him",
   },
   {
     id: "hawqala",
     arabic: "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِٱللَّٰهِ",
     translit: "La hawla wa la quwwata illa billah",
     meaning: "There is no might nor power except with Allah",
-    round: 100,
   },
 ];
 
