@@ -1,0 +1,281 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Hoops & Hasanat — visual system
+   Lifted from the Pillars poster: cobalt watercolour ground, red rim, cream
+   net, geometric sans over wide-tracked mono. Committed dark palette; there
+   is no light mode, because the room this runs in is a gym at night.
+   ========================================================================== */
+
+@theme {
+  --color-cobalt-950: #0d1b45;
+  --color-cobalt-900: #12245c;
+  --color-cobalt-850: #172c6e;
+  --color-cobalt-800: #1c3480;
+  --color-cobalt-700: #243f96;
+  --color-cobalt-600: #2f4fb0;
+  --color-cobalt-500: #4166c9;
+
+  --color-rim-600: #a8382a;
+  --color-rim-500: #c4472f;
+  --color-rim-400: #d2503a;
+  --color-rim-300: #e5745e;
+
+  --color-net-50:  #faf8f4;
+  --color-net-100: #f4f1ea;
+  --color-net-200: #e4dfd3;
+  --color-net-300: #c9c2b2;
+
+  --color-gold-400: #e8b04b;
+
+  --font-display: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, "SF Mono", monospace;
+}
+
+:root {
+  --ground: #162a68;
+  --edge: rgba(244, 241, 234, 0.14);
+  --edge-soft: rgba(244, 241, 234, 0.08);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  background: var(--ground);
+}
+
+body {
+  min-height: 100dvh;
+  color: var(--color-net-100);
+  font-family: var(--font-display);
+  /* Watercolour ground: pooled pigment from three directions over a cobalt
+     base, the way the poster's wash darkens at the edges and blooms centre-left. */
+  background-color: var(--ground);
+  background-image:
+    radial-gradient(120% 90% at 8% 12%, rgba(65, 102, 201, 0.55) 0%, rgba(65, 102, 201, 0) 55%),
+    radial-gradient(100% 80% at 92% 8%, rgba(13, 27, 69, 0.85) 0%, rgba(13, 27, 69, 0) 60%),
+    radial-gradient(130% 110% at 50% 118%, rgba(9, 20, 54, 0.9) 0%, rgba(9, 20, 54, 0) 60%),
+    linear-gradient(168deg, #1d3583 0%, #162a68 45%, #101f52 100%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+/* Paper tooth. A fractal-noise SVG overlay is what separates "flat blue" from
+   "watercolour on cold-press paper" — it is the whole reason the poster reads
+   as painted rather than filled. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.38;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+/* Coarser pigment mottling, larger scale than the paper tooth. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.22;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='5' seed='7'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='700' height='700' filter='url(%23w)'/%3E%3C/svg%3E");
+}
+
+/* Everything real sits above the wash. */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Type
+   -------------------------------------------------------------------------- */
+
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  color: rgba(244, 241, 234, 0.62);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.arabic {
+  font-family: "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", serif;
+  direction: rtl;
+  line-height: 2;
+}
+
+/* --------------------------------------------------------------------------
+   Surfaces
+   -------------------------------------------------------------------------- */
+
+.panel {
+  background: rgba(9, 20, 54, 0.42);
+  border: 1px solid var(--edge);
+  border-radius: 1rem;
+  backdrop-filter: blur(6px);
+}
+
+.panel-quiet {
+  background: rgba(9, 20, 54, 0.26);
+  border: 1px solid var(--edge-soft);
+  border-radius: 1rem;
+}
+
+.hairline {
+  border-color: var(--edge-soft);
+}
+
+/* --------------------------------------------------------------------------
+   Controls
+   -------------------------------------------------------------------------- */
+
+.btn {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--edge);
+  color: var(--color-net-100);
+  background: rgba(244, 241, 234, 0.06);
+  transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: rgba(244, 241, 234, 0.12);
+  border-color: rgba(244, 241, 234, 0.28);
+}
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.btn-rim {
+  background: var(--color-rim-500);
+  border-color: var(--color-rim-400);
+  color: var(--color-net-50);
+}
+.btn-rim:hover:not(:disabled) {
+  background: var(--color-rim-400);
+  border-color: var(--color-rim-300);
+}
+
+.field {
+  width: 100%;
+  background: rgba(9, 20, 54, 0.5);
+  border: 1px solid var(--edge);
+  border-radius: 0.6rem;
+  padding: 0.8rem 0.95rem;
+  color: var(--color-net-50);
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.field:focus {
+  border-color: rgba(244, 241, 234, 0.4);
+  box-shadow: 0 0 0 3px rgba(65, 102, 201, 0.28);
+}
+.field::placeholder { color: rgba(244, 241, 234, 0.32); }
+
+/* --------------------------------------------------------------------------
+   The dhikr counter
+   -------------------------------------------------------------------------- */
+
+.tap-target {
+  position: relative;
+  width: min(78vw, 20rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 1px solid rgba(244, 241, 234, 0.22);
+  background:
+    radial-gradient(circle at 50% 36%, rgba(65, 102, 201, 0.5), rgba(9, 20, 54, 0.72) 68%);
+  box-shadow:
+    inset 0 1px 0 rgba(244, 241, 234, 0.16),
+    0 20px 60px -18px rgba(0, 0, 0, 0.7);
+  transition: transform 90ms ease, box-shadow 90ms ease;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+.tap-target:active {
+  transform: scale(0.975);
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.45),
+    0 10px 30px -18px rgba(0, 0, 0, 0.7);
+}
+
+@keyframes ripple {
+  from { transform: scale(1); opacity: 0.5; }
+  to   { transform: scale(1.35); opacity: 0; }
+}
+.ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgba(244, 241, 234, 0.5);
+  animation: ripple 620ms ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes floatUp {
+  from { transform: translate(-50%, 0) scale(1); opacity: 0.9; }
+  to   { transform: translate(-50%, -74px) scale(1.25); opacity: 0; }
+}
+.float-plus {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  animation: floatUp 800ms ease-out forwards;
+  pointer-events: none;
+  font-family: var(--font-mono);
+}
+
+@keyframes pulseRing {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.7; }
+}
+.live-dot {
+  animation: pulseRing 1.8s ease-in-out infinite;
+}
+
+/* Reduced motion: keep feedback, drop travel. */
+@media (prefers-reduced-motion: reduce) {
+  .ripple, .float-plus, .live-dot { animation-duration: 1ms; animation-iteration-count: 1; }
+  .tap-target { transition: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Utility
+   -------------------------------------------------------------------------- */
+
+.scroll-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(244, 241, 234, 0.16);
+  border-radius: 99px;
+}
