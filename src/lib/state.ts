@@ -24,7 +24,7 @@ export async function loadState(code: string): Promise<GameState | null> {
     await db.rpc("ensure_rounds", { p_game: game.id });
   }
 
-  const [teams, players, matches, feed, roundRow] = await Promise.all([
+  const [teamsRes, players, matches, feed, roundRow] = await Promise.all([
     db.from("teams").select("*").eq("game_id", game.id).order("ord").order("created_at"),
     db
       .from("players")
@@ -41,6 +41,21 @@ export async function loadState(code: string): Promise<GameState | null> {
       .limit(1)
       .maybeSingle(),
   ]);
+
+  // A game created before the court rotation existed — or one whose teams were
+  // edited — can end up with nobody seated. Repair it on read, otherwise the
+  // console offers no way to tip off and the evening stalls.
+  let teams = (teamsRes.data ?? []) as GameState["teams"];
+  if (teams.length >= 2 && teams.filter((t) => t.on_court).length < 2) {
+    await db.rpc("seed_court", { p_game: game.id });
+    const { data } = await db
+      .from("teams")
+      .select("*")
+      .eq("game_id", game.id)
+      .order("ord")
+      .order("created_at");
+    if (data) teams = data as GameState["teams"];
+  }
 
   let round: Round | null = null;
   let roundTally: Record<string, number> = {};
@@ -63,7 +78,7 @@ export async function loadState(code: string): Promise<GameState | null> {
 
   return {
     game: game as GameState["game"],
-    teams: (teams.data ?? []) as GameState["teams"],
+    teams,
     players: (players.data ?? []) as GameState["players"],
     matches: (matches.data ?? []) as GameState["matches"],
     feed: (feed.data ?? []) as GameState["feed"],

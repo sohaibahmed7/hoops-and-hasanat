@@ -126,6 +126,44 @@ create index if not exists rounds_game_idx  on rounds(game_id, idx);
 create index if not exists feed_game_idx    on feed(game_id, created_at desc);
 
 -- ---------------------------------------------------------------------------
+-- Upgrades
+--
+-- `create table if not exists` above is a no-op on a database that already has
+-- the table — including when this file has since grown new columns. Without
+-- the block below, re-running the schema on an existing project silently
+-- leaves it on the old shape, and the app fails at runtime on the missing
+-- column rather than at install time.
+--
+-- Everything here is `if not exists`, so this is safe on a fresh database too.
+-- ---------------------------------------------------------------------------
+
+alter table games add column if not exists started_at   timestamptz;
+alter table games add column if not exists point_target int  not null default 7;
+alter table games add column if not exists rotation_min int  not null default 10;
+alter table games add column if not exists azkar_seq    text[] not null default '{}';
+alter table games add column if not exists k_match      real not null default 24;
+alter table games add column if not exists k_dhikr      real not null default 12;
+alter table games add column if not exists tap_rate     real not null default 8;
+alter table games add column if not exists tap_burst    real not null default 30;
+
+alter table teams add column if not exists ord         int  not null default 0;
+alter table teams add column if not exists dhikr_count bigint not null default 0;
+alter table teams add column if not exists on_court    boolean not null default false;
+alter table teams add column if not exists queue_pos   int;
+alter table teams add column if not exists streak      int  not null default 0;
+
+alter table players add column if not exists tap_allowance real not null default 30;
+alter table players add column if not exists tap_checked   timestamptz not null default now();
+
+alter table matches add column if not exists target int not null default 7;
+
+-- Columns from earlier versions of this file that no longer carry meaning.
+-- Dropped rather than left behind so the shape matches what the app expects.
+alter table games drop column if exists dhikr_block;
+alter table games drop column if exists host_token;
+alter table teams drop column if exists dhikr_blocks;
+
+-- ---------------------------------------------------------------------------
 -- RLS: the browser may read a game it knows the code of, but never write.
 -- Every write goes through a Next.js route handler using the service role key.
 -- ---------------------------------------------------------------------------
